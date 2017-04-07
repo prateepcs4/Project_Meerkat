@@ -5,7 +5,7 @@ from keras.layers.core import Activation
 from keras.layers.normalization import BatchNormalization
 from keras.models import Sequential
 
-batch_size = 5
+batch_size = 50
 in_sequence_len = 3
 out_sequence_len = 3
 init_res_gen = 512
