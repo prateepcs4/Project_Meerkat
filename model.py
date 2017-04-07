@@ -1,22 +1,21 @@
-from keras.layers.convolutional import Conv3D, UpSampling3D
-from keras.models import Sequential
-from keras.layers import Dense, Reshape
-from keras.layers.normalization import BatchNormalization
-from keras.layers.core import Activation
-from keras.activations import relu, tanh
 import numpy as np
+from keras.layers import Dense, Reshape
+from keras.layers.convolutional import Conv3D, UpSampling3D
+from keras.layers.core import Activation
+from keras.layers.normalization import BatchNormalization
+from keras.models import Sequential
 
 batch_size = 5
 in_sequence_len = 3
 out_sequence_len = 3
 init_res_gen = 512
 
-def generator_1():
+def generator_32x32():
     network = Sequential()
     network.add(Dense(1024, input_dim=200, activation='relu'))
     network.add(Dense(in_sequence_len*4*4*init_res_gen, activation='relu'))
-    network.add(Reshape((in_sequence_len,4,4,init_res_gen)))
-    network.add(UpSampling3D((1,2,2)))
+    network.add(Reshape((in_sequence_len, 4, 4, init_res_gen)))
+    network.add(UpSampling3D((1, 2, 2)))
     network.add(Conv3D(init_res_gen/2, kernel_size=3, activation='relu', padding='same'))
     network.add(BatchNormalization())
     network.add(Activation('relu'))
@@ -33,4 +32,4 @@ def generator_1():
     output = network.predict(input, batch_size=batch_size, verbose=0)
     print np.shape(output)
 
-generator_1()
+generator_32x32()
