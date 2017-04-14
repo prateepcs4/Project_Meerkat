@@ -2,6 +2,7 @@ import numpy as np
 from keras.layers import Dense, Reshape, TimeDistributed
 from keras.layers.convolutional import Conv3D, UpSampling3D
 from keras.layers.core import Activation, Flatten
+from keras.layers.recurrent import LSTM
 from keras.layers.normalization import BatchNormalization
 from keras.models import Sequential
 
@@ -24,6 +25,8 @@ def generator_32x32():
 def discriminator_32x32():
     network = Sequential()
     network.add(TimeDistributed(Flatten(), input_shape=(3, 32, 32, 3)))
+    network.add(TimeDistributed(Dense(1024, activation='relu')))
+    network.add(LSTM(512))
 
     return network
 
