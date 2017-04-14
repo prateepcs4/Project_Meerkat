@@ -23,7 +23,7 @@ def generator_32x32():
 
 def discriminator_32x32():
     network = Sequential()
-    network.add(TimeDistributed(Flatten()))
+    network.add(TimeDistributed(Flatten(), input_shape=(3, 32, 32, 3)))
 
     return network
 
