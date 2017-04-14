@@ -28,8 +28,9 @@ def discriminator_32x32():
     return network
 
 G = generator_32x32()
-D = G.add(discriminator_32x32())
+D = discriminator_32x32()
 
 input = np.random.rand(batch_size, 3, 32, 32, 3)
-output = D.predict(input, batch_size=batch_size, verbose=0)
+output_G = G.predict(input, batch_size=batch_size, verbose=0)
+output = D.predict(output_G, batch_size=batch_size, verbose=0)
 print np.shape(output)
