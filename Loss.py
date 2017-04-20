@@ -18,7 +18,7 @@ def l1_loss(gen_frames, gt_frames, l_p):
     return lp
 
 
-# Utility function for fast computation of patches from a 2D numpy array
+# Utility function for fast computation of patches from a tensor
 def patchify(input, ksize, stride):
     patches = tf.extract_image_patches(input, ksizes=[1, ksize, ksize, 1], strides=[1, stride, stride, 1],
                                                rates=[1, 1, 1, 1], padding='VALID')
