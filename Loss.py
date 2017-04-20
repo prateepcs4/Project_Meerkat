@@ -19,20 +19,11 @@ def l1_loss(gen_frames, gt_frames, l_p):
 
 
 # Utility function for fast computation of patches from a 2D numpy array
-def patchify(img, patch_shape):
-    X, Y, a = img.shape
-    x, y = patch_shape
-    shape = (X - x + 1, Y - y + 1, x, y, a)
-    X_str, Y_str, a_str = img.strides
-    strides = (X_str, Y_str, X_str, Y_str, a_str)
-    return np.lib.stride_tricks.as_strided(img, shape=shape, strides=strides)
-
-
-def sliding_patches(a, block_size):
-    hBSZ = (block_size - 1) // 2
-    a_ext = np.dstack(np.pad(a[..., i], hBSZ, 'edge') for i in range(a.shape[2]))
-    return patchify(a_ext, (block_size, block_size))
-
+def patchify(input, ksize, stride):
+    patches = tf.extract_image_patches(input, ksizes=[1, ksize, ksize, 1], strides=[1, stride, stride, 1],
+                                               rates=[1, 1, 1, 1], padding='VALID')
+    patches = tf.reshape(patches, [-1, ksize, ksize, 1])
+    return patches
 
 patch_size_cur = 2
 patch_size_prev = patch_size_cur + 2
@@ -49,10 +40,14 @@ def cross_corr_loss(in_frames, gen_frames, gt_frames, alpha):
         # print last_in_frame.get_shape()
         for frame_index in xrange(n_frames):
             prev_frame = last_in_frame if frame_index == 0 else gen_frames[batch_index][frame_index-1]
-            cur_frame = gen_frames[frame_index]
+            cur_frame = gen_frames[batch_index][frame_index]
             # print prev_frame.get_shape()
             padded_prev_frame = tf.pad(prev_frame, pad, "CONSTANT")
-#             Iterate through the cur_frame in non-overlapping sequence
+            # Extract patches from the cur_frame
+            cur_frame = cur_frame[:,:,0]
+            cur_frame = tf.expand_dims(tf.expand_dims(cur_frame, 0), -1)
+            patch_cur_frames = patchify(cur_frame, patch_size_cur, 2)
+
 
 
 # Tester for loss functions
