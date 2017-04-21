@@ -80,10 +80,12 @@ def get_distance(frame_1, frame_2):
 def contrastive_loss(preds, in_frames, gen_frames):
     delta = tf.constant(1, dtype=tf.float32)
     n_batches, n_frames, n_rows, n_cols, n_channels = gen_frames.get_shape().as_list()
+    scores = np.ndarray(shape=(n_batches, 1))
     for batch_index in xrange(n_batches):
         # Extract the last input frame
         last_in_frame = in_frames[batch_index][-1]
         # Iterate over the frames
+        total_score = tf.constant(0, dtype=tf.float32)
         for frame_index in xrange(n_frames):
             prev_frame = last_in_frame if frame_index == 0 else gen_frames[batch_index][frame_index - 1]
             cur_frame = gen_frames[batch_index][frame_index]
@@ -91,7 +93,10 @@ def contrastive_loss(preds, in_frames, gen_frames):
             score = preds[batch_index][frame_index] * distance + (1 - preds[batch_index][frame_index]) * \
                                                                       tf.maximum( tf.constant(0, dtype=tf.float32),
                                                                                   tf.subtract(delta, distance))
-            print sess.run(score)
+            total_score = tf.add(total_score, score)
+
+        scores[batch_index, 0] = sess.run(total_score)
+    return tf.convert_to_tensor(scores, dtype=tf.float32)
 
 # Tester for patchify
 def patch_test(input):
@@ -110,11 +115,11 @@ NUM_SCALES = 5
 MAX_P = 5
 MAX_ALPHA = 1
 
-in_frames = tf.zeros([BATCH_SIZE, 3, 32, 32, 3])
-gen_frames = tf.ones([BATCH_SIZE, 3, 32, 32, 3])
+in_frames = tf.ones([BATCH_SIZE, 3, 32, 32, 3])
+gen_frames = tf.zeros([BATCH_SIZE, 3, 32, 32, 3])
 gt_frames = tf.ones([BATCH_SIZE, 3, 32, 32, 3])
 preds = tf.ones([BATCH_SIZE, 3])
 res_tru = 0
 
-contrastive_loss(preds, in_frames, gen_frames)
+print sess.run(contrastive_loss(preds, in_frames, gen_frames))
 # assert res == res_tru, 'Failed'
