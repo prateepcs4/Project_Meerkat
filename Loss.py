@@ -1,5 +1,8 @@
 import numpy as np
 import tensorflow as tf
+import os
+
+os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 
 sess = tf.InteractiveSession()
 
@@ -68,7 +71,7 @@ def cross_corr_loss(in_frames, gen_frames):
                 score = xcorr(cur_prev_patch, tf.expand_dims(patches_cur_frame[cur_patch_index], 0))
                 total_xcorr_score += score
         scores[batch_index, 0] = sess.run(1 - total_xcorr_score)
-    return tf.convert_to_tensor(scores, dtype=tf.float32)
+    return tf.reduce_mean(tf.convert_to_tensor(scores, dtype=tf.float32))
 
 
 # Utility function for calculating the Euclidean distance between two matrices
@@ -91,12 +94,23 @@ def contrastive_loss(preds, in_frames, gen_frames):
             cur_frame = gen_frames[batch_index][frame_index]
             distance = get_distance(prev_frame, cur_frame)
             score = preds[batch_index][frame_index] * distance + (1 - preds[batch_index][frame_index]) * \
-                                                                      tf.maximum( tf.constant(0, dtype=tf.float32),
-                                                                                  tf.subtract(delta, distance))
+                                                                      tf.nn.relu(tf.subtract(delta, distance))
             total_score = tf.add(total_score, score)
 
         scores[batch_index, 0] = sess.run(total_score)
-    return tf.convert_to_tensor(scores, dtype=tf.float32)
+    return tf.reduce_mean(tf.convert_to_tensor(scores, dtype=tf.float32))
+
+
+# Returns the combined loss value
+def combined_loss(preds, targets, in_frames, gen_frames, gt_frames):
+    adv_score = bce_loss(preds, targets)
+    lp_score = lp_loss(gen_frames, gt_frames, 2)
+    cross_corr_score = cross_corr_loss(in_frames, gen_frames)
+    contrastive_score = contrastive_loss(preds, in_frames, gen_frames)
+
+    final_score = adv_score + lp_score + cross_corr_score + contrastive_score
+    return final_score
+
 
 # Tester for patchify
 def patch_test(input):
