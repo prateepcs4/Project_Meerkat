@@ -15,8 +15,9 @@ def bce_loss(preds, targets):
 
 # Returns the lp loss
 def lp_loss(gen_frames, gt_frames, l_p):
+    n_batches, n_frames, n_rows, n_cols, n_channels = gen_frames.get_shape().as_list()
     lp = 0
-    for i in xrange(len(gen_frames)):
+    for i in xrange(n_batches):
         lp = lp + tf.reduce_sum(tf.abs(gen_frames[i] - gt_frames[i]) ** l_p)
     return lp
 
@@ -135,5 +136,5 @@ gt_frames = tf.ones([BATCH_SIZE, 3, 32, 32, 3])
 preds = tf.ones([BATCH_SIZE, 3])
 res_tru = 0
 
-print sess.run(contrastive_loss(preds, in_frames, gen_frames))
+print sess.run(lp_loss(in_frames, gen_frames, 1))
 # assert res == res_tru, 'Failed'
