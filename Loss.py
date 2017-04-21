@@ -11,7 +11,7 @@ def bce_loss(preds, targets):
 
 
 # Returns the lp loss
-def l1_loss(gen_frames, gt_frames, l_p):
+def lp_loss(gen_frames, gt_frames, l_p):
     lp = 0
     for i in xrange(len(gen_frames)):
         lp = lp + tf.reduce_sum(tf.abs(gen_frames[i] - gt_frames[i]) ** l_p)
@@ -25,12 +25,11 @@ def patchify(input, ksize, stride, channels):
     patches = tf.reshape(patches, [-1, ksize, ksize, channels])
     return patches
 
-# Utility funtion for calculating the correlation score between a base matrix and an input template
+# Utility funtion for calculating the cross correlation score between a base matrix and an input template
 def xcorr(base, patch):
-    base_r_channel = tf.expand_dims(base[:, :, :, 0], -1)
-    patch_r_channel = tf.expand_dims(tf.expand_dims(patch[0, :, :, 0], -1), -1)
-    corr = tf.reduce_mean(tf.nn.conv2d(base_r_channel, patch_r_channel, [1, 1, 1, 1], padding='VALID'))
-    print sess.run(corr)
+    patch = tf.expand_dims(patch[0, :, :, :], -1)
+    corr = tf.reduce_mean(tf.nn.conv2d(base, patch, [1, 1, 1, 1], padding='VALID'))
+    return corr
 
 stride = 2
 patch_size_cur = 2
@@ -38,14 +37,16 @@ patch_size_prev = patch_size_cur + 2
 
 
 # Returns the cross correlation loss
-def cross_corr_loss(in_frames, gen_frames, gt_frames, alpha):
+def cross_corr_loss(in_frames, gen_frames):
     n_batches, n_frames, n_rows, n_cols, n_channels = in_frames.get_shape().as_list()
     pad = tf.constant([[2, 2], [2, 2], [0, 0]])
+    scores = np.ndarray(shape=(n_batches, 1))
     # Iterate over batches
     for batch_index in xrange(n_batches):
         # Extract the last input frame
         last_in_frame = in_frames[batch_index][-1]
         # print last_in_frame.get_shape()
+        total_xcorr_score = 0
         for frame_index in xrange(n_frames):
             prev_frame = last_in_frame if frame_index == 0 else gen_frames[batch_index][frame_index-1]
             cur_frame = gen_frames[batch_index][frame_index]
@@ -54,16 +55,22 @@ def cross_corr_loss(in_frames, gen_frames, gt_frames, alpha):
             cur_frame = tf.expand_dims(cur_frame, 0)
             patches_cur_frame = patchify(cur_frame, patch_size_cur, [1, stride, stride, 1], 3)
             n_patches, patch_height, _, _ = patches_cur_frame.get_shape().as_list()
-            # Extract patches from the previous frame for mapping
-            patches_prev_frame = patchify(padded_prev_frame, patch_size_prev, [1, stride-1, stride-1, 1], 3)
             # Iterate over the patches
             dim_patch_grid = n_rows/patch_height
             for cur_patch_index in xrange(n_patches):
+                # Patch matching logic between prev_frame and cur_patch
                 left_x = 2 * (cur_patch_index / dim_patch_grid)
                 left_y = 2 * (cur_patch_index % dim_patch_grid)
                 cur_prev_patch = tf.slice(padded_prev_frame, [0, left_x, left_y, 0], [1, patch_size_prev,
                                                                                       patch_size_prev, 3])
                 score = xcorr(cur_prev_patch, tf.expand_dims(patches_cur_frame[cur_patch_index], 0))
+                total_xcorr_score += score
+        scores[batch_index, 0] = sess.run(1 - total_xcorr_score)
+    return tf.convert_to_tensor(scores, dtype=tf.float32)
+
+# Returns the contrastive divergence loss
+def contrastive_loss(preds, in_frames, gen_frames):
+    n_batches, n_frames, n_rows, n_cols, n_channels = gen_frames.get_shape().as_list()
 
 # Tester for patchify
 def patch_test(input):
@@ -76,15 +83,15 @@ def patch_test(input):
 
 # Tester for loss functions
 
-BATCH_SIZE = 20
+BATCH_SIZE = 2
 NUM_SCALES = 5
 MAX_P = 5
 MAX_ALPHA = 1
 
-in_frames = tf.ones([BATCH_SIZE, 3, 32, 32, 3])
+in_frames = tf.zeros([BATCH_SIZE, 3, 32, 32, 3])
 gen_frames = tf.ones([BATCH_SIZE, 3, 32, 32, 3])
 gt_frames = tf.ones([BATCH_SIZE, 3, 32, 32, 3])
 res_tru = 0
 
-cross_corr_loss(in_frames, gen_frames, gt_frames, 1)
+print sess.run(cross_corr_loss(in_frames, gen_frames))
 # assert res == res_tru, 'Failed'
