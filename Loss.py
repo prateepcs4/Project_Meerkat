@@ -21,15 +21,17 @@ def lp_loss(gen_frames, gt_frames, l_p):
 # Utility function for fast computation of patches from a 4D tensor (batchsize x H x W x channels) (supports batch mode)
 def patchify(input, ksize, stride, channels):
     patches = tf.extract_image_patches(input, ksizes=[1, ksize, ksize, 1], strides=stride,
-                                               rates=[1, 1, 1, 1], padding='VALID')
+                                       rates=[1, 1, 1, 1], padding='VALID')
     patches = tf.reshape(patches, [-1, ksize, ksize, channels])
     return patches
+
 
 # Utility funtion for calculating the cross correlation score between a base matrix and an input template
 def xcorr(base, patch):
     patch = tf.expand_dims(patch[0, :, :, :], -1)
     corr = tf.reduce_mean(tf.nn.conv2d(base, patch, [1, 1, 1, 1], padding='VALID'))
     return corr
+
 
 stride = 2
 patch_size_cur = 2
@@ -48,7 +50,7 @@ def cross_corr_loss(in_frames, gen_frames):
         # print last_in_frame.get_shape()
         total_xcorr_score = 0
         for frame_index in xrange(n_frames):
-            prev_frame = last_in_frame if frame_index == 0 else gen_frames[batch_index][frame_index-1]
+            prev_frame = last_in_frame if frame_index == 0 else gen_frames[batch_index][frame_index - 1]
             cur_frame = gen_frames[batch_index][frame_index]
             padded_prev_frame = tf.expand_dims(tf.pad(prev_frame, pad, "CONSTANT"), 0)
             # Extract patches from the cur_frame
@@ -56,7 +58,7 @@ def cross_corr_loss(in_frames, gen_frames):
             patches_cur_frame = patchify(cur_frame, patch_size_cur, [1, stride, stride, 1], 3)
             n_patches, patch_height, _, _ = patches_cur_frame.get_shape().as_list()
             # Iterate over the patches
-            dim_patch_grid = n_rows/patch_height
+            dim_patch_grid = n_rows / patch_height
             for cur_patch_index in xrange(n_patches):
                 # Patch matching logic between prev_frame and cur_patch
                 left_x = 2 * (cur_patch_index / dim_patch_grid)
@@ -68,16 +70,36 @@ def cross_corr_loss(in_frames, gen_frames):
         scores[batch_index, 0] = sess.run(1 - total_xcorr_score)
     return tf.convert_to_tensor(scores, dtype=tf.float32)
 
+
+# Utility function for calculating the Euclidean distance between two matrices
+def get_distance(frame_1, frame_2):
+    return tf.sqrt(tf.reduce_sum(tf.square(tf.subtract(frame_1, frame_2))))
+
+
 # Returns the contrastive divergence loss
 def contrastive_loss(preds, in_frames, gen_frames):
+    delta = tf.constant(1, dtype=tf.float32)
     n_batches, n_frames, n_rows, n_cols, n_channels = gen_frames.get_shape().as_list()
+    for batch_index in xrange(n_batches):
+        # Extract the last input frame
+        last_in_frame = in_frames[batch_index][-1]
+        # Iterate over the frames
+        for frame_index in xrange(n_frames):
+            prev_frame = last_in_frame if frame_index == 0 else gen_frames[batch_index][frame_index - 1]
+            cur_frame = gen_frames[batch_index][frame_index]
+            distance = get_distance(prev_frame, cur_frame)
+            score = preds[batch_index][frame_index] * distance + (1 - preds[batch_index][frame_index]) * \
+                                                                      tf.maximum( tf.constant(0, dtype=tf.float32),
+                                                                                  tf.subtract(delta, distance))
+            print sess.run(score)
 
 # Tester for patchify
 def patch_test(input):
-    input = tf.pad(input, [[0,0], [1, 1], [1, 1], [0, 0]], "CONSTANT")
+    input = tf.pad(input, [[0, 0], [1, 1], [1, 1], [0, 0]], "CONSTANT")
     patch = patchify(input, 2, 2, 3)
     print patch.get_shape()
-    print sess.run(patch[1,:,:,1])
+    print sess.run(patch[1, :, :, 1])
+
 
 # patch_test(tf.ones([1, 10, 10, 3]))
 
@@ -91,7 +113,8 @@ MAX_ALPHA = 1
 in_frames = tf.zeros([BATCH_SIZE, 3, 32, 32, 3])
 gen_frames = tf.ones([BATCH_SIZE, 3, 32, 32, 3])
 gt_frames = tf.ones([BATCH_SIZE, 3, 32, 32, 3])
+preds = tf.ones([BATCH_SIZE, 3])
 res_tru = 0
 
-print sess.run(cross_corr_loss(in_frames, gen_frames))
+contrastive_loss(preds, in_frames, gen_frames)
 # assert res == res_tru, 'Failed'
