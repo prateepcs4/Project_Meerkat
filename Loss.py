@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import os
+from tfutils import log10
 
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 
@@ -9,9 +10,8 @@ sess = tf.InteractiveSession()
 
 # Returns the binary cross-entropy loss calculated from the predicted outputs (0/1) and the targets (0/1)
 def bce_loss(preds, targets):
-    return tf.squeeze(-1 * (tf.matmul(targets, np.log10(preds), transpose_a=True) +
-                            tf.matmul(1 - targets, np.log10(1 - preds), transpose_a=True)))
-
+    return tf.squeeze(-1 * (tf.matmul(targets, log10(preds), transpose_a=True) +
+                            tf.matmul(1 - targets, log10(1 - preds), transpose_a=True)))
 
 # Returns the lp loss
 def lp_loss(gen_frames, gt_frames, l_p):
@@ -103,8 +103,9 @@ def contrastive_loss(preds, in_frames, gen_frames):
 
 
 # Returns the combined loss value
-def combined_loss(preds, targets, in_frames, gen_frames, gt_frames):
-    adv_score = bce_loss(preds, targets)
+def combined_loss(preds, in_frames, gen_frames, gt_frames):
+    n_batches, n_frames, _, _, _ = in_frames.get_shape().as_list()
+    adv_score = bce_loss(preds, tf.ones([n_batches, n_frames]))
     lp_score = lp_loss(gen_frames, gt_frames, 2)
     cross_corr_score = cross_corr_loss(in_frames, gen_frames)
     contrastive_score = contrastive_loss(preds, in_frames, gen_frames)
@@ -136,5 +137,5 @@ gt_frames = tf.ones([BATCH_SIZE, 3, 32, 32, 3])
 preds = tf.ones([BATCH_SIZE, 3])
 res_tru = 0
 
-print sess.run(lp_loss(in_frames, gen_frames, 1))
+print sess.run(bce_loss(preds, tf.zeros([BATCH_SIZE, 3])))
 # assert res == res_tru, 'Failed'
