@@ -26,3 +26,26 @@ def log10(t):
     numerator = tf.log(t)
     denominator = tf.log(tf.constant(10, dtype=numerator.dtype))
     return numerator / denominator
+
+def conv_out_size(i, p, k, s):
+    """
+    Gets the output size for a 3D convolution. (Assumes square input and kernel).
+    @param i: The side length of the input.
+    @param p: The padding type (either 'SAME' or 'VALID').
+    @param k: The side length of the kernel.
+    @param s: The stride.
+    @type i: int
+    @type p: string
+    @type k: int
+    @type s: int
+    @return The side length of the output.
+    """
+    # convert p to a number
+    if p == 'SAME':
+        p = k // 2
+    elif p == 'VALID':
+        p = 0
+    else:
+        raise ValueError('p must be "SAME" or "VALID".')
+
+    return int(((i + (2 * p) - k) / s) + 1)
