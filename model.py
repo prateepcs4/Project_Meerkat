@@ -27,7 +27,7 @@ def discriminator_32x32():
     network.add(TimeDistributed(Flatten(), input_shape=(3, 32, 32, 3)))
     network.add(TimeDistributed(Dense(1024, activation='relu')))
     network.add(TimeDistributed(Dense(256, activation='relu')))
-    network.add(LSTM(100))
+    network.add(LSTM(100, return_sequences='true'))
 
     return network
 
