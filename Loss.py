@@ -131,9 +131,9 @@ NUM_SCALES = 5
 MAX_P = 5
 MAX_ALPHA = 1
 
-in_frames = tf.ones([BATCH_SIZE, 3, 32, 32, 3])
-gen_frames = tf.zeros([BATCH_SIZE, 3, 32, 32, 3])
-gt_frames = tf.ones([BATCH_SIZE, 3, 32, 32, 3])
+in_frames = tf.ones([BATCH_SIZE, 32, 32, 3])
+gen_frames = tf.zeros([BATCH_SIZE, 32, 32, 3])
+gt_frames = tf.ones([BATCH_SIZE, 32, 32, 3])
 preds = tf.ones([BATCH_SIZE, 3])
 res_tru = 0
 

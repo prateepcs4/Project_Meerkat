@@ -4,14 +4,13 @@ import numpy as np
 from scipy.misc import imsave
 from skimage.transform import resize
 from tfutils import w, b
+import constants as c
 
 class Generator_Model:
-    def __init__(self, session, seqlen, frame_height, frame_width, channel, feature_maps, kernel_sizes):
+    def __init__(self, session, frame_height, frame_width, feature_maps, kernel_sizes):
         self.sess = session
-        self.seqlen = seqlen
         self.frame_height = frame_height
         self.frame_width = frame_width
-        self.num_chanels = channel
         self.feature_maps = feature_maps
         self.kernel_sizes = kernel_sizes
 
@@ -22,18 +21,18 @@ class Generator_Model:
             # Data
             with tf.name_scope('data'):
                 # Prepare the placeholder for train input frames
-                self.input_frames_train = tf.placeholder(tf.float32, shape=[None, self.seqlen, self.frame_height,
-                                                                            self.frame_width, self.num_chanels])
+                self.input_frames_train = tf.placeholder(tf.float32, shape=[None, self.frame_height,
+                                                                            self.frame_width, 3*c.HIST_LEN])
                 # Prepare the placeholder for train ground-truth frames
-                self.gt_frames_train = tf.placeholder(tf.float32, shape=[None, self.seqlen, self.frame_height,
-                                                                            self.frame_width, self.num_chanels])
+                self.gt_frames_train = tf.placeholder(tf.float32, shape=[None, self.frame_height,
+                                                                            self.frame_width, 3*c.OUT_LEN])
 
                 # Prepare the placeholder for test input frames
-                self.input_frames_test = tf.placeholder(tf.float32, shape=[None, self.seqlen, self.frame_height,
-                                                                            self.frame_width, self.num_chanels])
+                self.input_frames_test = tf.placeholder(tf.float32, shape=[None, self.frame_height,
+                                                                            self.frame_width, 3*c.HIST_LEN])
                 # Prepare the placeholder for test ground-truth frames
-                self.gt_frames_test = tf.placeholder(tf.float32, shape=[None, self.seqlen, self.frame_height,
-                                                                         self.frame_width, self.num_chanels])
+                self.gt_frames_test = tf.placeholder(tf.float32, shape=[None, self.frame_height,
+                                                                         self.frame_width, 3*c.OUT_LEN])
 
                 # Variable batchsize
                 self.batch_size_train = tf.shape(self.input_frames_train)[0]
@@ -59,9 +58,9 @@ class Generator_Model:
                         scale_ws = []
                         scale_bs = []
                         for i in xrange(len(self.kernel_sizes)):
-                            scale_ws.append(w([self.seqlen, self.kernel_sizes[i], self.kernel_sizes[i],
+                            scale_ws.append(w([self.kernel_sizes[i], self.kernel_sizes[i],
                                            self.feature_maps[i],
-                                         self.feature_maps[i + 1]]))
+                                        self.feature_maps[i + 1]]))
                             scale_bs.append(b([self.feature_maps[i + 1]]))
 
                         # Add to trainable parameters
@@ -94,7 +93,7 @@ class Generator_Model:
                 with tf.name_scope('train'):
                     self.global_loss = combined_loss(self.d_preds, self.input_frames_train, self.preds_train, self.gts_train)
                     self.global_step = tf.Variable(0, trainable=False)
-                    self.optimizer = tf.train.AdamOptimizer(learning_rate=0.0004, name='optim')
+                    self.optimizer = tf.train.AdamOptimizer(learning_rate=c.LRATE_G, name='optim')
                     self.train_op = self.optimizer.minimize(self.global_loss, global_step=self.global_step,
                                                             var_list=self.train_vars, name='train_op')
                     loss_summary = tf.summary.scalar('train_loss_G', self.global_loss)
@@ -106,8 +105,8 @@ class Generator_Model:
         with tf.name_scope('convolutions'):
 
             for i in xrange(len(self.kernel_sizes)):
-                # 3D Convolve
-                preds = tf.nn.conv3d(preds, self.ws[i], [1, 1, 1, 1, 1], padding='same')
+                # 2D Convolve
+                preds = tf.nn.conv2d(preds, self.ws[i], [1, 1, 1, 1], padding=c.PADDING_G)
 
                 # Add activation units (tanh for last layer and relu for the rest)
                 if i == len(self.kernel_sizes) - 1:
@@ -119,8 +118,8 @@ class Generator_Model:
 
     def train_step(self, batch, discriminator=None):
 
-        input_frames = batch[:, :, :, :, :-3]
-        gt_frames = batch[:, :, :, :, -3:]
+        input_frames = batch[:, :, :, :-3*c.OUT_LEN]
+        gt_frames = batch[:, :, :, -3*c.OUT_LEN:]
 
         feed_dict = {self.input_frames_train:input_frames, self.gt_frames_train:gt_frames}
 

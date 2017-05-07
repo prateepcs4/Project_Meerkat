@@ -49,3 +49,12 @@ def conv_out_size(i, p, k, s):
         raise ValueError('p must be "SAME" or "VALID".')
 
     return int(((i + (2 * p) - k) / s) + 1)
+
+def leaky_relu(tensor, leak=0.01):
+    """
+    Computes a leaky ReLU with the given alpha.
+    @param tensor: The input tensor.
+    @param leak: The slope of the relu on negative inputs.
+    @return: The tensor after applying the leaky ReLU.
+    """
+    return tf.maximum(leak * tensor, tensor)
