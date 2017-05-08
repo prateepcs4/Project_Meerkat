@@ -85,4 +85,6 @@ class Discriminator_Model:
         if global_step % c.STATS_FREQ == 0:
             print 'DiscriminatorModel: step %d | global loss: %f' % (global_step, global_loss)
 
+        return global_step
+
 
