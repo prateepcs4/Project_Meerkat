@@ -1,3 +1,9 @@
+STATS_FREQ      = 10     # how often to print loss/train error stats, in # steps
+SUMMARY_FREQ    = 100    # how often to save the summaries, in # steps
+IMG_SAVE_FREQ   = 1000   # how often to save generated images, in # steps
+TEST_FREQ       = 5000   # how often to test the model on test data, in # steps
+MODEL_SAVE_FREQ = 10000  # how often to save the model, in # steps
+
 # the training minibatch size
 BATCH_SIZE = 8
 # the number of history frames to give as input to the network
@@ -9,3 +15,4 @@ PADDING_G = 'SAME'
 LRATE_G = 0.0004
 
 PADDING_D = 'SAME'
+LRATE_D = 0.01

@@ -63,7 +63,26 @@ class Discriminator_Model:
 
             with tf.name_scope('training'):
                 self.global_loss = bce_loss(self.preds, self.labels)
-                self.global_step = tf.Variable()
+                self.global_step = tf.Variable(0, trainable=False, name='global_step')
+                self.optimizer = tf.train.AdamOptimizer(c.LRATE_D, name='optimizer')
+                self.train_op = self.optimizer.minimize(self.global_loss,
+                                                        global_step=self.global_step,
+                                                        var_list=self.train_vars,
+                                                        name='train_op')
 
+                all_preds = tf.stack(self.preds)
+                # Calculate the accuracy
+                for i in xrange(c.OUT_LEN):
+                    self.accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.round(all_preds[i]), self.labels[i]), tf.int8))
+
+
+    def train_step(self, batch):
+        # Runs a training step using the global loss on the discriminator network.
+        feed_dict = {self.input_clips : batch}
+        _, global_loss, global_step = self.sess.run([self.train_op, self.global_loss, self.global_step],
+                                                               feed_dict=feed_dict)
+
+        if global_step % c.STATS_FREQ == 0:
+            print 'DiscriminatorModel: step %d | global loss: %f' % (global_step, global_loss)
 
 
