@@ -71,3 +71,31 @@ def process_clip():
             break
 
     return cropped_clip
+
+def get_train_batch():
+    """
+    Loads c.BATCH_SIZE clips from the database of preprocessed training clips.
+    @return: An array of shape
+            [c.BATCH_SIZE, c.TRAIN_HEIGHT, c.TRAIN_WIDTH, (3 * (c.HIST_LEN + c.OUT_LEN))].
+    """
+    clips = np.empty([c.BATCH_SIZE, c.TRAIN_HEIGHT, c.TRAIN_WIDTH, (3 * (c.HIST_LEN + c.OUT_LEN))],
+                     dtype=np.float32)
+    for i in xrange(c.BATCH_SIZE):
+        path = c.TRAIN_DIR_CLIPS + str(np.random.choice(c.NUM_CLIPS)) + '.npz'
+        clip = np.load(path)['arr_0']
+
+        clips[i] = clip
+
+    return clips
+
+def get_test_batch(test_batch_size, num_rec_out=1):
+    """
+    Gets a clip from the test dataset.
+    @param test_batch_size: The number of clips.
+    @param num_rec_out: The number of outputs to predict. Outputs > 1 are computed recursively,
+                        using the previously-generated frames as input. Default = 1.
+    @return: An array of shape:
+             [test_batch_size, c.TEST_HEIGHT, c.TEST_WIDTH, (3 * (c.HIST_LEN + num_rec_out))].
+             A batch of frame sequences with values normalized in range [-1, 1].
+    """
+    return get_full_clips(c.TEST_DIR, test_batch_size, num_rec_out=num_rec_out)

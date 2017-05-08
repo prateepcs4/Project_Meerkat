@@ -116,7 +116,7 @@ class Generator_Model:
         return preds, gts
 
 
-    def train_step(self, batch, discriminator=None):
+    def train_step(self, batch):
 
         input_frames = batch[:, :, :, :-3*c.OUT_LEN]
         gt_frames = batch[:, :, :, -3*c.OUT_LEN:]
