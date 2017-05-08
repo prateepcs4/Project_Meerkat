@@ -1,3 +1,65 @@
+import os
+from glob import glob
+import shutil
+import numpy as np
+from scipy.ndimage import imread
+
+def get_dir(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    return directory
+
+
+def clear_dir(directory):
+    """
+    Removes all files in the given directory.
+    @param directory: The path to the directory.
+    """
+    for f in os.listdir(directory):
+        path = os.path.join(directory, f)
+        try:
+            if os.path.isfile(path):
+                os.unlink(path)
+            elif os.path.isdir(path):
+                shutil.rmtree(path)
+        except Exception as e:
+            print(e)
+
+def get_test_frame_dims():
+    img_path = glob(os.path.join(TEST_DIR, '*/*'))[0]
+    img = imread(img_path, mode='RGB')
+    shape = np.shape(img)
+
+    return shape[0], shape[1]
+
+def get_train_frame_dims():
+    img_path = glob(os.path.join(TRAIN_DIR, '*/*'))[0]
+    img = imread(img_path, mode='RGB')
+    shape = np.shape(img)
+
+    return shape[0], shape[1]
+# root directory for all data
+DATA_DIR = get_dir('/Data/')
+# directory of unprocessed training frames
+TRAIN_DIR = os.path.join(DATA_DIR, 'Ms_Pacman/Train/')
+# directory of unprocessed test frames
+TEST_DIR = os.path.join(DATA_DIR, 'Ms_Pacman/Test/')
+# Directory of processed training clips.
+# hidden so finder doesn't freeze w/ so many files. DON'T USE `ls` COMMAND ON THIS DIR!
+TRAIN_DIR_CLIPS = get_dir(os.path.join(DATA_DIR, '.Clips/'))
+
+# For processing clips. l2 diff between frames must be greater than this
+MOVEMENT_THRESHOLD = 100
+# total number of processed clips in TRAIN_DIR_CLIPS
+NUM_CLIPS = len(glob(TRAIN_DIR_CLIPS + '*'))
+
+# the height and width of the full frames to test on. Set in avg_runner.py or process_data.py main.
+FULL_HEIGHT = 210
+FULL_WIDTH = 160
+# the height and width of the patches to train on
+TRAIN_HEIGHT = TRAIN_WIDTH = 32
+
+
 STATS_FREQ      = 10     # how often to print loss/train error stats, in # steps
 SUMMARY_FREQ    = 100    # how often to save the summaries, in # steps
 IMG_SAVE_FREQ   = 1000   # how often to save generated images, in # steps
