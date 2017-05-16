@@ -1,0 +1,168 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+% \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading nips_2017
+%
+% to avoid loading the natbib package, add option nonatbib:
+% \usepackage[nonatbib]{nips_2017}
+
+\usepackage[nonatbib]{nips_2017}
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+% \usepackage[final]{nips_2017}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+
+\usepackage{mathtools}
+\usepackage{graphicx}
+\usepackage[ruled,linesnumbered,algosection]{algorithm2e}
+\usepackage{multirow}
+\usepackage{subcaption}
+\usepackage{alphalph}
+\usepackage{xr}
+
+\def\thesection{\Alph{section}}
+\externaldocument[I-]{master_note}
+\renewcommand{\thesubfigure}{\roman{subfigure}}
+\renewcommand{\theequation}{\Roman{equation}}
+\renewcommand{\thetable}{\Roman{table}}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\undermax}{max}
+\DeclareMathOperator*{\undermin}{min}
+
+\title{Supplementary: Temporal Coherence based Criteria for Predicting the Future using Deep Multi-stage Generative Adversarial Networks}
+
+% The \author macro works with any number of authors. There are two
+% commands used to separate the names and addresses of multiple
+% authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to
+% break the lines. Using \AND forces a line break at that point. So,
+% if LaTeX puts 3 of 4 authors names on the first line, and the last
+% on the second line, try using \AND instead of \And before the third
+% author name.
+
+\author{
+  David S.~Hippocampus\thanks{Use footnote for providing further
+    information about author (webpage, alternative
+    address)---\emph{not} for acknowledging funding agencies.} \\
+  Department of Computer Science\\
+  Cranberry-Lemon University\\
+  Pittsburgh, PA 15213 \\
+  \texttt{hippo@cs.cranberry-lemon.edu} \\
+  %% examples of more authors
+  %% \And
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+  %% \AND
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+  %% \And
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+  %% \And
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+}
+
+\begin{document}
+% \nipsfinalcopy is no longer used
+
+\maketitle
+
+
+\section{Smoothed Normalized Cross-Correlation Loss (S-NCCL)}
+  \label{sec:snccl}
+  In this section, we provide a modification of the Normalized Cross-Correlation Loss (NCCL) presented in section \ref{I-sec:nccl} of the paper. This modification assumes that, while comparing two local patches between the previous frame at timestamp $ t-1 $ and the current frame at timestamp $ t $, majority of the motion similar to both the frames occur around the central pixel of the patches. This assumption makes the system more \textit{robust} to sudden small variation in motion occuring at the boundaries of the local patches.
+  
+  To accomplish this heuristic in practical terms, a weight function can be learned whose parameters are learned adaptively. This requires learning these parametrs along with those of the multi-stage GAN discussed in sec. \ref{I-sec:model}, which is a non-trivial problem. For the sake of simplicity, we approximate this weight function using a two-dimensional mean-centered Gaussian lowpass filter (2D-GLPF) and experiment with varying amount of standard deviation of the filter. The algorithm for calculating the smoothed normalized cross-correlation score is outlined in algo. A.1. The $ w_{xy} $ values are the smoothing weights that we apply while convolving two image patches for calculating the similarity score.
+  We show results obtained using using this version of the NCCL in fig. [INSERT FIGURE]
+  
+  \begin{algorithm}[t]
+  	\caption{Calculation of the smoothed normalized cross-correlation score for finding similarity between a set of predicted frame(s) and a set of ground-truth frame(s).}
+  	\SetAlgoLined
+  	\KwIn{Ground-truth frames $ (GT) $, Predicted frames $ (PRED) $, Gaussian filter $ (GLPF) $ [Dimension = $ h \times h $]}
+  	\KwOut{Smoothed Cross-correlation score ($Score_{SNCC}$)}
+  	\textbf{Variables:}\\
+  	$ w_{xy} $ = entry of the $ x- $th row and $ y- $th column of GLPF\\
+  	$ h $ = height and width of an image patch\\
+  	$ t $ = current time\;
+  	\textbf{Initialize:} $ Score_{SNCC} = 0 $\;
+  	\For{$ t = 1 $ upto $ T $}{
+  		\For{$ i = 0 $ upto $ H $, $ i \leftarrow i + h $}{
+  			\For{$ j = 0 $ upto $ H $, $ j \leftarrow j + h $}{
+  				$ P_t \leftarrow extract\_patch(PRED_t, i, j, h) $\;
+  				$ \backslash \backslash $ Extracts a patch from the predicted frame at time $ t $ of dimension $ h \times h $ starting from the top-left pixel index $ (i,j) $\;
+  				$ \hat{P}_{t - 1} \leftarrow extract\_patch(GT_{t - 1}, i - 2, j - 2, h + 4) $\;
+  				$ \backslash \backslash $ Extracts a patch from the ground-truth frame at time $ (t-1) $ of dimension $ (h+4) \times (h+4) $ starting from the top-left pixel index $ (i-2,j-2) $\;
+  				$ \mu_{P_t} \leftarrow avg(P_t)$\;
+  				$ \mu_{\hat{P}_{t-1}} \leftarrow avg(\hat{P}_{t-1})$\;
+  				$ \sigma_{P_t} \leftarrow standard\_deviation(P_t)$\;
+  				$ \sigma_{\hat{P}_{t-1}} \leftarrow standard\_deviation(\hat{P}_{t-1})$\;
+  				$ Score_{SNCC} \leftarrow Score_{SNCC} + Absolute\big(\sum_{x, y}^{}\frac{w_{xy}(P_t(x, y) - \mu_{P_t})(\hat{P}_{t-1}(x, y) - \mu_{\hat{P}_{t-1}})}{\sigma_{P_t} \sigma_{\hat{P_{t-1}}}} \big)$\;
+  			}	
+  		}
+  	}
+  	$ Score_{SNCC} \leftarrow avg(Score_{SNCC}) $\;
+  	\label{algo:sncc}
+  \end{algorithm} 
+  
+\section{Higher Order Pairwise Contrastive Divergence Loss}
+  \label{sec:hopcdl}  
+  The Pairwise Contrastive Divergence Loss (PCDL) discussed in sec. \ref{I-sec:pcdl} of the paper takes into account (dis)similarities between two consecutive frames to separate or bring them closer in the spatio-temporal feature space. This idea can be extended for higher order situations involving three or more consecutive frames.
+  
+  For $ n = 3 $, where $ n $ is the number of consecutive frames considered, the PCDL can be defined as:
+  \begin{equation}
+	\label{eq:3pcdl}
+  	\begin{split}
+  	\mathcal{L}_{3-PCDL} & = \sum_{i = 0}^{T} D_{\delta}(abs(\hat{Y}_i - \hat{Y}_{i + 1}), abs(\hat{Y}_{i + 1} - \hat{Y}_{i + 2}), p_{i, i+1, i+2}) \\
+  	& = \sum_{i = 0}^{T} p_{i,i+1,i+2} d(abs(\hat{Y}_i - \hat{Y}_{i + 1}), abs(\hat{Y}_{i + 1} - \hat{Y}_{i + 2})) \\
+  	& + (1 - p_{i,i+1,i+2}) max(0, \delta - d(abs(\hat{Y}_i - \hat{Y}_{i + 1}), abs(\hat{Y}_{i + 1} - \hat{Y}_{i + 2})))
+  	\end{split}
+  \end{equation} 
+  wher, $ p_{i,i+1,i+2} = 1 $ only if $ p_i, p_{i+1} $ and $ p_{i+2} $- all are simultaneously $ 1 $, \textit{i.e.}, the discriminator is very sure about the predicted frames that, they are from the original data distribution. All the other symbols bear standard representations defined in the paper.
+  
+  This version of the objective function, in essence, shrinks the distance between the predicted frames occuring in sequence in a temporal neighborhood, thereby increasing their similarity and maintaining the temporal coherency.
+  
+  \section{Results on KITTI Dataset}
+  Due to space restrictions, we present the results of training the multi-stage GAN using the proposed objective functions on the KITTI dataset in table I of this supplementary document.
+  
+  As the videos in this dataset have significant movement in most of the parts of the frames, the results slightly deteriorate from that of UCF-101. In spite of this, the trend is still visible, as the rate of fall in the quality of the frames acrross time is significantly less, thus ensuring the superiority of our method. 
+  \begin{table}[!htbp]
+  	\label{tab:sup_kitti}
+  	\caption{Experimental results on KITTI datset. PCDL refers to the version defined in eqn. \ref{I-eq:pcdl} in the paper and SNCCL is the smoothed normalized cross correlation (refer to sec. \ref{sec:snccl}).}
+  	\begin{tabular}{p{4cm}p{1.2cm}p{1.2cm}p{1.1cm}p{1.1cm}p{1.2cm}p{1.2cm}}
+  		\hline
+  		\multirow{2}{*}{} &
+  		\multicolumn{2}{p{2.5cm}}{1st frame prediction scores} &
+  		\multicolumn{2}{p{2.5cm}}{2nd frame prediction scores} &
+  		\multicolumn{2}{p{2.5cm}}{4th frame prediction scores} \\
+  		Methods & PSNR & SSIM & PSNR & SSIM & PSNR & SSIM \\
+  		\hline
+  		Adv + NCCL & 31.1 & 0.89 & 29.4 & 0.88 & 20.1 & 0.62 \\
+  		\hline
+  		Adv + NCCL + PCDL & 31.8 & 0.89 & 30.2 & 0.89 & 20.9 & 0.62 \\
+  		\hline
+  		Adv + NCCL + PCDL + L1 & 31.9 & 0.89 & 30.4 & 0.89 & 21.1 & 0.62 \\
+  		\hline
+  		Adv + SNCCL + PCDL + 3-PCDL & 32.6 & 0.90 & 31.3 & 0.89 & 21.8 & 0.63 \\
+  		\hline
+  		\end{tabular}
+  \end{table}
+\end{document}
